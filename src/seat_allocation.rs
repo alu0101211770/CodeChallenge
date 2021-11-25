@@ -17,22 +17,24 @@ pub fn get_number_of_groups(
     // the '1' are persons and the '0' are empty seats.
     for (row_position, column_position) in positions {
         let row = class_rows.entry(row_position - 1).or_insert(0);
-        add_ocuppied_seat(*column_position, row, n_columns);
+        add_ocuppied_seat(row, *column_position, n_columns);
     }
 
     let binary_group_size = 2_u32.pow(group_size) - 1;
-    let mut possible_groups: u32 = 0;
+    let mut possible_groups = 0;
     for (_, current_row) in class_rows {
-        let mut last_marked_seat: u32 = 0;
+        let mut last_marked_seat = 0;
         for column_shift in 0..=n_columns - group_size {
             if column_shift == 0 || column_shift >= last_marked_seat {
                 let group_end = column_shift + group_size;
-                let distance_to_aisle = i32::abs(aisle_seat as i32 - column_shift as i32);
-                let distance_to_group_end = i32::abs(distance_to_aisle - group_size as i32);
-                if column_shift >= aisle_seat // TODO try removing this condition
-                    || (group_end <= aisle_seat // a -> b === ~a || b
+                let distance_to_aisle = (aisle_seat as i32 - column_shift as i32).abs();
+                let distance_to_group_end = (distance_to_aisle - group_size as i32).abs();
+                // a -> (b -> (c && d)) === ~a || (~b || (c && d))
+                if column_shift >= aisle_seat
+                    || (group_end <= aisle_seat
                         || (distance_to_aisle > 1 && distance_to_group_end > 1))
                 {
+                    // Move the mask to the location where the group would be
                     let mask = 0 | binary_group_size << column_shift;
                     if !current_row & mask == mask {
                         possible_groups += 1;
@@ -45,7 +47,7 @@ pub fn get_number_of_groups(
     possible_groups
 }
 
-fn add_ocuppied_seat(column_shift: u32, row: &mut u32, n_columns: u32) {
+fn add_ocuppied_seat(row: &mut u32, column_shift: u32, n_columns: u32) {
     assert!(column_shift <= n_columns);
     *row |= 1 << (n_columns - column_shift)
 }
